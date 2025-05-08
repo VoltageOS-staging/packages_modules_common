@@ -104,7 +104,10 @@ java_defaults {
 // non_updatable_modules list in frameworks/base/api/api.go
 java_defaults {
     name: "non-updatable-framework-module-defaults",
-    defaults: ["framework-module-common-defaults"],
+    defaults: [
+        "boot-classpath-module-optimize-defaults",
+        "framework-module-common-defaults",
+    ],
 
     system: {
         enabled: true,
@@ -130,7 +133,10 @@ java_defaults {
 // Defaults for mainline module provided java_sdk_library instances.
 java_defaults {
     name: "framework-module-defaults",
-    defaults: ["framework-module-common-defaults"],
+    defaults: [
+        "boot-classpath-module-optimize-defaults",
+        "framework-module-common-defaults",
+    ],
     sdk_version: "module_current",
 
     system: {

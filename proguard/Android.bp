@@ -17,7 +17,14 @@ package {
     default_visibility: ["//visibility:public"],
 }
 
-// Needed because otherwise java_defaults would resolve it in module directory.
+java_defaults {
+    name: "boot-classpath-module-optimize-defaults",
+    optimize: {
+        force_disabled_with_source_stubs: true,
+    },
+}
+
+// Needed because otherwise java_defaults would resolve it in the module directory.
 filegroup {
     name: "framework-system-server-module-optimize-proguard-rules",
     srcs: [
