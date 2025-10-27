@@ -27,7 +27,23 @@ from typing import TextIO
 _FLAG_LINE_REGEX=re.compile(r"^([^/]+)/([^=]+)=(true|false)$")
 
 
-def parse_device_config_dumpsys(config_file: TextIO) -> list[dict]:
+def is_start_of_flags(line: str) -> bool:
+  """Detects if the line appears to be the start of the list of flags.
+
+  This can be either the device_config section in a whole dumpsys dump,
+  or the start of the output of `adb shell dumpsys device_config`.
+  """
+  return line == "DUMP OF SERVICE device_config" or line == "DeviceConfig flags:"
+
+
+def is_end_of_dumpsys(line: str) -> bool:
+  """Detects if the line appears to be the end of the device_config dumpsys section."""
+  return "duration of dumpsys device_config" in line
+
+
+def parse_device_config_dumpsys(
+    config_file: TextIO,
+) -> list[dict]:
   """Parses DeviceConfig dumpsys output and extracts flag information.
 
   It will only return flags that have a value of either true or false.
@@ -41,6 +57,8 @@ def parse_device_config_dumpsys(config_file: TextIO) -> list[dict]:
             with 'namespace', 'key', and 'value'.
   """
   parsed_flags = []
+  found_start = False
+
   try:
     for line in config_file:
       line = line.strip()
@@ -48,8 +66,17 @@ def parse_device_config_dumpsys(config_file: TextIO) -> list[dict]:
       if not line:
         continue
 
-      # we can get all sorts of text from the output. Including values that span multiple lines, etc.
-      # we can only do a best-effort to recognise the things that look like flags and ignore the rest.
+      if not found_start:
+        if is_start_of_flags(line):
+          found_start = True
+        continue
+
+      # check if we got to the end of the device_config dumpsys block
+      if is_end_of_dumpsys(line):
+        return parsed_flags
+
+      # We can get all sorts of text from the output. Including values that span multiple lines, etc.
+      # We can only do a best-effort to recognise the things that look like flags and ignore the rest.
       match = _FLAG_LINE_REGEX.match(line)
       if match:
         namespace, key, value = match.groups()
@@ -72,6 +99,7 @@ def main():
       help="Path to the DeviceConfig dump file. Use '-' for stdin.",
       type=argparse.FileType("r", encoding="utf-8"),
   )
+
   args = parser.parse_args()
 
   with args.file as file:
