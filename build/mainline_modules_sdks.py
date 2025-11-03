@@ -382,6 +382,10 @@ class SnapshotBuilder:
     # The out/soong/mainline-sdks directory.
     mainline_sdks_dir: str = ""
 
+    # TODO(b/157465465): Remove skip_allowed_deps_check once there's been enough
+    # time showing that no art-master build is relying on it. The art-master
+    # build command was updated in cl/819259439.
+
     # True if apex-allowed-deps-check is to be skipped.
     skip_allowed_deps_check: bool = False
 
@@ -420,8 +424,6 @@ class SnapshotBuilder:
             "TARGET_PRODUCT=mainline_sdk",
             "MODULE_BUILD_FROM_SOURCE=true",
         ] + target_paths
-        if not self.skip_allowed_deps_check:
-            cmd += ["apex-allowed-deps-check"]
         print_command(extraEnv, cmd)
         env = os.environ.copy()
         env.update(extraEnv)
