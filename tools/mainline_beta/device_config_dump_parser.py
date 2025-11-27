@@ -16,6 +16,7 @@
 #
 
 import argparse
+from dataclasses import dataclass
 import io
 import re
 import sys
@@ -25,11 +26,28 @@ import zipfile
 
 _verbose: bool = False
 
+
+@dataclass
+class Flag:
+  """Represents a single device config flag."""
+  namespace: str
+  key: str
+  value: str
+
 # Regex to match lines like "namespace/key=value"
 # Group 1: namespace
 # Group 2: key
 # Group 3: value
-_FLAG_LINE_REGEX=re.compile(r"^([^/]+)/([^=]+)=(true|false)$")
+_FLAG_LINE_REGEX=re.compile(r"^([^/]+)/([^=]+)=(.*)$")
+
+_MAINLINE_BETA_NAMESPACES = [
+    "com_android_mainline_beta_mockup",
+    "com_android_tethering",
+    "com_android_networkstack",
+    "com_android_captiveportallogin",
+    "com_android_healthfitness",
+    "com_android_mediaprovider",
+]
 
 
 def is_start_of_flags(line: str) -> bool:
@@ -48,7 +66,7 @@ def is_end_of_dumpsys(line: str) -> bool:
 
 def parse_device_config_dumpsys(
     config_file: TextIO,
-) -> list[dict]:
+) -> list[Flag]:
   """Parses DeviceConfig dumpsys output and extracts flag information.
 
   It will only return flags that have a value of either true or false.
@@ -62,41 +80,59 @@ def parse_device_config_dumpsys(
             with 'namespace', 'key', and 'value'.
   """
   parsed_flags = []
+  # previous_flags countains (namespace, key) => flag value
+  previous_flags = {}
   found_start = False
 
-  try:
-    for line in config_file:
-      line = line.strip()
+  if _verbose:
+    print("Will start parsing the file")
 
-      if not line:
-        continue
+  for line in config_file:
+    line = line.strip()
 
-      if not found_start:
-        if is_start_of_flags(line):
-          found_start = True
-          if _verbose:
-            print("Found start of section")
-        continue
+    if not line:
+      continue
 
-      # check if we got to the end of the device_config dumpsys block
-      if is_end_of_dumpsys(line):
+    if not found_start:
+      if is_start_of_flags(line):
+        found_start = True
         if _verbose:
-          print("Found end of section")
-        return parsed_flags
+          print("Found start of section")
+      continue
 
-      # We can get all sorts of text from the output. Including values that span multiple lines, etc.
-      # We can only do a best-effort to recognise the things that look like flags and ignore the rest.
-      match = _FLAG_LINE_REGEX.match(line)
-      if match:
-        namespace, key, value = match.groups()
-        parsed_flags.append(
-            {"namespace": namespace, "key": key, "value": value}
-        )
+    # check if we got to the end of the device_config dumpsys block
+    if is_end_of_dumpsys(line):
+      if _verbose:
+        print("Found end of section")
+      return parsed_flags
 
+    # We can get all sorts of text from the output. Including values that span multiple lines, etc.
+    # We can only do a best-effort to recognise the things that look like flags and ignore the rest.
+    match = _FLAG_LINE_REGEX.match(line)
+    if match:
+      namespace, key, value = match.groups()
+      # for aconfig, empty string is a disabled flag
+      if not value:
+        value = "false"
+      flag = Flag(namespace=namespace, key=key, value=value)
+      key_for_duplicates = (namespace, key)
+      if key_for_duplicates in previous_flags:
+        if value == previous_flags[key_for_duplicates]:
+          # we found a duplicate, but the flag value is the same.
+          continue
+        print(f"Found a duplicate value for flag {flag}. Previous value: {previous_flags[key_for_duplicates]}", file=sys.stderr)
+        sys.exit(1)
+      else:
+        previous_flags[key_for_duplicates] = value
+      parsed_flags.append(Flag(namespace=namespace, key=key, value=value))
+
+  if not parsed_flags:
+    print("Warning: No flags found. Did you pass the correct file?", file=sys.stderr)
+    sys.exit(1)
   return parsed_flags
 
 
-def handle_zip_file(file_path: str) -> list[dict]:
+def handle_zip_file(file_path: str) -> list[Flag]:
   """Handles the parsing of a zip file to extract flag values.
 
   It will try to find the main txt file that contains the bugreport logs and
@@ -145,7 +181,7 @@ def find_bugreport_inside_zip(z: zipfile.ZipFile) -> str:
   sys.exit(1)
 
 
-def handle_txt_file(file_path: str) -> list[dict]:
+def handle_txt_file(file_path: str) -> list[Flag]:
   file_arg = sys.stdin.fileno() if file_path == "-" else file_path
   try:
     # ignore errors as there are weird bytes in some files.
@@ -154,6 +190,20 @@ def handle_txt_file(file_path: str) -> list[dict]:
   except FileNotFoundError:
     print(f"Error: File not found at {file_path}", file=sys.stderr)
     sys.exit(1)
+
+
+def filter_mainline_beta_flags(flags: list[Flag]) -> list[Flag]:
+  filtered_flags = []
+  for flag in flags:
+    if flag.namespace in _MAINLINE_BETA_NAMESPACES:
+      if flag.value in ["true", "false"]:
+        filtered_flags.append(flag)
+      else:
+        print(
+            f"Warning: Beta flag {flag} has an invalid value. Ignoring it.",
+            file=sys.stderr,
+        )
+  return filtered_flags
 
 
 def main():
@@ -172,27 +222,36 @@ def main():
       action="store_true",
       help="Print more information",
   )
+  parser.add_argument(
+      "--print-flags",
+      action="store_true",
+      help="Print the mainline beta flags found",
+  )
   args = parser.parse_args()
 
   global _verbose
   _verbose = args.verbose
+
   is_zip = args.file != "-" and zipfile.is_zipfile(args.file)
   if is_zip:
-    # handle zip file
     flags = handle_zip_file(args.file)
   else:
     flags = handle_txt_file(args.file)
 
-  if flags:
+  if args.verbose:
+    print(f"Total number of flags found: {len(flags)}")
+  flags = filter_mainline_beta_flags(flags)
+  if args.verbose:
+    print(f"Number of Mainline beta flags: {len(flags)}")
+
+  if flags and args.print_flags:
     print("Parsed DeviceConfig Flags:")
     for flag in flags:
-      print(
-          f"  Namespace: {flag['namespace']}, Key: {flag['key']}, Value:"
-          f" {flag['value']}"
-      )
-  else:
+      print(flag)
+  if not flags:
     print(
-        "No DeviceConfig flags found in the file matching the expected format."
+        "Warning: No Mainline beta flags found in the file.",
+        file=sys.stderr
     )
 
 
