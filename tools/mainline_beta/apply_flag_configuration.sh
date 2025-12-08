@@ -22,9 +22,9 @@ trap 'echo "An error occurred. Aborting script."' ERR
 set -u
 
 function usage() {
-    echo "Usage: $0 <path/to/payload>" >&2
-    echo "This will apply the flags from the payload file to the connected device."  >&2
-    echo "The payload file is created by another program, distributed together with this tool," \
+    echo "Usage: $0 <path/to/flag/configuration>" >&2
+    echo "This will apply the flags from the aconfig flag configuration file to the connected device."  >&2
+    echo "The file is created by another program, distributed together with this tool," \
       "that will contain the information about which flags need to be set to what value." >&2
 }
 
@@ -33,10 +33,10 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-PAYLOAD="$1"
+FLAG_CONFIGURATION_FILE="$1"
 
-if [ ! -f "${PAYLOAD}" ]; then
-    echo "Error: '$PAYLOAD' is not a valid file." >&2
+if [ ! -f "${FLAG_CONFIGURATION_FILE}" ]; then
+    echo "Error: '${FLAG_CONFIGURATION_FILE}' is not a valid file." >&2
     usage
     exit 1
 fi
@@ -46,10 +46,10 @@ adb wait-for-device
 
 DEVICE_DIR=$(adb shell mktemp -d)
 
-PAYLOAD_FILE="${DEVICE_DIR}/payload"
-PROGRAM_FILE="${DEVICE_DIR}/apply_flags.sh"
+REMOTE_FLAG_CONFIGURATION_FILE="${DEVICE_DIR}/flag_configuration.txt"
+REMOTE_PROGRAM_FILE="${DEVICE_DIR}/apply_flags.sh"
 
-adb push "${PAYLOAD}" "${PAYLOAD_FILE}"
+adb push "${FLAG_CONFIGURATION_FILE}" "${REMOTE_FLAG_CONFIGURATION_FILE}"
 
 HOST_PROGRAM_FILE=$(mktemp)
 
@@ -69,8 +69,8 @@ cat <<END > "${HOST_PROGRAM_FILE}"
   echo I will iterate each line on file \$1
 END
 
-adb push "${HOST_PROGRAM_FILE}" "${PROGRAM_FILE}"
-adb shell chmod +x "${PROGRAM_FILE}"
-adb shell "${PROGRAM_FILE}" "${PAYLOAD_FILE}"
+adb push "${HOST_PROGRAM_FILE}" "${REMOTE_PROGRAM_FILE}"
+adb shell chmod +x "${REMOTE_PROGRAM_FILE}"
+adb shell "${REMOTE_PROGRAM_FILE}" "${REMOTE_FLAG_CONFIGURATION_FILE}"
 
 rm "${HOST_PROGRAM_FILE}"
