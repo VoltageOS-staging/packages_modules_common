@@ -206,6 +206,15 @@ def filter_mainline_beta_flags(flags: list[Flag]) -> list[Flag]:
   return filtered_flags
 
 
+def write_flags_to_file(flags: list[Flag], output: TextIO):
+  """Writes the flags to a file-like object.
+
+  The format is one flag per line, in the format namespace key value.
+  """
+  for flag in flags:
+    output.write(f"{flag.namespace} {flag.key} {flag.value}\n")
+
+
 def main():
   parser = argparse.ArgumentParser(
       description="Parse a DeviceConfig dumpsys file and extract flag information."
@@ -215,6 +224,14 @@ def main():
       help=(
           "Path to the file to analyse. Passing a zip file implies it is a "
           "bug report. Use '-' for stdin. Zip files over stdin are not supported."
+      ),
+  )
+  parser.add_argument(
+      "output",
+      help=(
+          "Path to the output file where the flag values are stored. Pass "
+          "this file to `apply_flag_configuration.sh` to apply this set of "
+          "flag values to the connected device."
       ),
   )
   parser.add_argument(
@@ -253,6 +270,9 @@ def main():
         "Warning: No Mainline beta flags found in the file.",
         file=sys.stderr
     )
+
+  with open(args.output, "w") as out:
+    write_flags_to_file(flags, out)
 
 
 if __name__ == "__main__":

@@ -362,6 +362,31 @@ class DeviceConfigDumpParserTest(unittest.TestCase):
 
     self.assertEqual(cm.exception.code, 1)
 
+  def test_write_flags_to_file(self):
+    output = io.StringIO()
+    device_config_dump_parser.write_flags_to_file(
+        [
+            device_config_dump_parser.Flag(
+                "com_android_mainline_beta_mockup",
+                "com.android.apex.flags.enable_brand_new_apex",
+                "false",
+            ),
+            device_config_dump_parser.Flag(
+                "com_android_tethering",
+                "android.view.accessibility.a11y_character_in_window_api",
+                "true",
+            ),
+        ],
+        output,
+    )
+    self.assertEqual(
+        output.getvalue(),
+        textwrap.dedent("""\
+            com_android_mainline_beta_mockup com.android.apex.flags.enable_brand_new_apex false
+            com_android_tethering android.view.accessibility.a11y_character_in_window_api true
+            """),
+    )
+
 
 if __name__ == "__main__":
   unittest.main(verbosity=2)

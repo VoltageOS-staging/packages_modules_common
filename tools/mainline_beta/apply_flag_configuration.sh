@@ -23,8 +23,9 @@ set -u
 
 function usage() {
     echo "Usage: $0 <path/to/flag/configuration>" >&2
+    echo "" >&2
     echo "This will apply the flags from the aconfig flag configuration file to the connected device."  >&2
-    echo "The file is created by another program, distributed together with this tool," \
+    echo "The file is created by device_config_dump_parser.py, distributed together with this tool," \
       "that will contain the information about which flags need to be set to what value." >&2
 }
 
@@ -65,12 +66,24 @@ cat <<END > "${HOST_PROGRAM_FILE}"
 
   cmd device_config set_sync_disabled_for_tests persistent
 
-  # this is not yet actually implemented
-  echo I will iterate each line on file \$1
+  # Reads each line of the input file, which is expected to be in the format
+  # <namespace> <flag_name> <value>
+  # and then calls device_config to apply the change.
+  while read -r namespace flag value; do
+    echo "Setting flag '\${namespace}/\${flag}' to '\${value}'"
+    cmd device_config put "\${namespace}" "\${flag}" "\${value}"
+  done < "\$1"
+
+  echo
+  echo "Finished applying all flags."
 END
 
 adb push "${HOST_PROGRAM_FILE}" "${REMOTE_PROGRAM_FILE}"
 adb shell chmod +x "${REMOTE_PROGRAM_FILE}"
 adb shell "${REMOTE_PROGRAM_FILE}" "${REMOTE_FLAG_CONFIGURATION_FILE}"
+
+echo
+echo "Flag configuration applied. A reboot is required for all changes to take full effect."
+echo "Please run: adb reboot"
 
 rm "${HOST_PROGRAM_FILE}"
