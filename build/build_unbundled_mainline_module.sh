@@ -67,7 +67,6 @@ readonly -a DEFAULT_MODULES=(
   DocumentsUI
   ExtServices-tplus
   NetworkStack
-  NetworkStackNext
   PermissionController
 )
 
