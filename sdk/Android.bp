@@ -73,7 +73,7 @@ java_defaults {
     droiddoc_options: [
         "--error UnhiddenSystemApi",
         "--error UnflaggedApi",
-        "--error-when-new FlaggedApiLiteral",
+        "--error FlaggedApiLiteral",
         "--hide CallbackInterface",
         "--enhance-documentation",
     ],
