@@ -1324,6 +1324,13 @@ MAINLINE_MODULES = [
         module_proto_key="TETHERING",
     ),
     MainlineModule(
+        apex="com.android.uprobestats",
+        sdks=["uprobestats-module-sdk"],
+        first_release=Baklava,
+        last_optional_release=LATEST,
+        module_proto_key="",
+    ),
+    MainlineModule(
         apex="com.android.uwb",
         sdks=["uwb-module-sdk"],
         first_release=Tiramisu,
