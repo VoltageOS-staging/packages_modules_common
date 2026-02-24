@@ -24,6 +24,12 @@ java_defaults {
     defaults_visibility: [
         "//visibility:public",
     ],
+
+    errorprone: {
+        javacflags: [
+            "-Xep:NotJavadoc:ERROR",
+        ],
+    },
 }
 
 // Defaults common to all mainline module java_sdk_library instances.
