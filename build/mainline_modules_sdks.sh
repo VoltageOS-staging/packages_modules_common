@@ -23,12 +23,6 @@ function init() {
       declare -gr py3script="$2"
       shift 2
       ;;
-    # TODO: b/482338457 - Remove this flag once we are confident that we
-    # can unconditionally skip the null build.
-    --no-null-build)
-      declare -gr no_null_build=true
-      shift 1
-      ;;
     *)
       ARGV+=("$1")
       shift 1
@@ -53,14 +47,6 @@ function main() {
   vars="$(TARGET_PRODUCT='' build/soong/soong_ui.bash --dumpvars-mode \
     --vars="DIST_DIR OUT_DIR")"
   eval "${vars}"
-
-  # Skip the null build if this script was called with --no-null-build.
-  if [ -z "${no_null_build}" ]; then
-    # Building with --soong-only and module products requires build_number.txt
-    # for some targets.
-    # Command to populate {OUT_DIR}/soong/build_number.txt.
-    build/soong/soong_ui.bash --make-mode nothing
-  fi
 
   # Delegate the SDK generation to the python script. Use the python version
   # provided by the build to ensure consistency across build environments.
