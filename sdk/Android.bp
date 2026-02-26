@@ -17,9 +17,21 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Defaults common to all sources that contribute to the Android API.
+java_defaults {
+    name: "android-api-contributor-defaults",
+
+    defaults_visibility: [
+        "//visibility:public",
+    ],
+}
+
 // Defaults common to all mainline module java_sdk_library instances.
 java_defaults {
     name: "framework-module-common-defaults",
+    defaults: [
+        "android-api-contributor-defaults",
+    ],
 
     // Use the source of annotations that affect metalava doc generation, since
     // the relevant generation instructions are themselves in javadoc, which is
