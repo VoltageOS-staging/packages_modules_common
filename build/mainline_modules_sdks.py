@@ -439,6 +439,8 @@ class SnapshotBuilder:
             f"TARGET_BUILD_VARIANT={target_build_variant}",
             "TARGET_PRODUCT=mainline_sdk",
             "MODULE_BUILD_FROM_SOURCE=true",
+            # Make sure that metalava is built.
+            "metalava",
         ] + target_paths
         print_command(extraEnv, cmd)
         env = os.environ.copy()
@@ -629,6 +631,36 @@ java_sdk_library_import {{
             self.build_target_paths(build_release, target_paths)
         return target_dict
 
+    @staticmethod
+    def reformat_signature_file(signature_file):
+        """Reformat `signature_file` to a standard format.
+
+        Avoids changes in format being recorded as API changes.
+        """
+        # Make sure that metalava is available. It will not be available in a
+        # test environment so just return the original file in that case.
+        if shutil.which("metalava") is None:
+            return signature_file
+
+        reformatted_signature_file = f"{signature_file}.reformatted"
+        subprocess.run(
+            [
+                "metalava",
+                "signature-cat",
+                "--format",
+                # Use 6.0 as that is the latest most consistent format version
+                # that is currently supported.
+                "6.0",
+                "--format-defaults",
+                "add-additional-overrides=yes",
+                "--output-file",
+                reformatted_signature_file,
+                signature_file,
+            ],
+            check=True,
+        )
+        return reformatted_signature_file
+
     def appendDiffToFile(
         self, file_object, sdk_zip_file, current_api, latest_api, snapshots_dir
     ):
@@ -637,11 +669,21 @@ java_sdk_library_import {{
             extracted_current_api = zipObj.extract(
                 member=current_api, path=snapshots_dir
             )
-            with open(latest_api) as f:
+
+            # Reformat the signature files before comparison.
+            reformatted_latest_api = self.reformat_signature_file(latest_api)
+            reformatted_current_api = self.reformat_signature_file(
+                extracted_current_api
+            )
+
+            # Compare the reformatted files.
+            with open(reformatted_latest_api) as f:
                 a = f.read()
-            with open(extracted_current_api) as f:
+            with open(reformatted_current_api) as f:
                 b = f.read()
-            diff = unified_diff(a, b, latest_api, extracted_current_api)
+            diff = unified_diff(
+                a, b, reformatted_latest_api, reformatted_current_api
+            )
             file_object.write(diff)
 
     def create_snapshot_gantry_metadata_and_api_diff(
