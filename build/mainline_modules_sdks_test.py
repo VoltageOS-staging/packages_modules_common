@@ -176,6 +176,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -412,6 +413,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = unittest.mock.Mock(mm.SubprocessRunner)
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -467,6 +469,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -540,6 +543,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
