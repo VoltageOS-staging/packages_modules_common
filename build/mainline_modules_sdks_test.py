@@ -109,6 +109,10 @@ class FakeSnapshotBuilder(mm.SnapshotBuilder):
             # For rest of the modules, generate an empty .info file.
             self.write_data_to_file(sdk_info_file, "[]")
 
+    # Override to prevent invoking metalava in tests.
+    def reformat_signature_file(self, signature_file):
+        return signature_file
+
     def get_module_extension_version(self):
         # Return any integer value indicating the module extension version for testing.
         return 5
