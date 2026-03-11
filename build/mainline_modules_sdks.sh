@@ -45,7 +45,7 @@ function main() {
   # Assign to a variable and eval that, since bash ignores any error status from
   # the command substitution if it's directly on the eval line.
   vars="$(TARGET_PRODUCT='' build/soong/soong_ui.bash --dumpvars-mode \
-    --vars="DIST_DIR OUT_DIR")"
+    --vars="ANDROID_JAVA_HOME DIST_DIR OUT_DIR")"
   eval "${vars}"
 
   # Delegate the SDK generation to the python script. Use the python version
@@ -58,8 +58,16 @@ function main() {
 
   # The path to this tool is the .sh script that lives alongside the .py script.
   TOOL_PATH="${py3script%.py}.sh"
+
+  # Make sure that Android's java is on the path as that is needed for metalava.
+  export PATH="${ANDROID_JAVA_HOME}/bin:${PATH}"
+
+  # Determine the path to metalava
+  METALAVA_PATH="${ANDROID_HOST_OUT-${OUT_DIR-out}/host/linux-x86}/bin/metalava"
+
   prebuilts/build-tools/linux-x86/bin/py3-cmd -u "${py3script}" \
       --tool-path "${TOOL_PATH}" \
+      --metalava-path "${METALAVA_PATH}" \
       "$@"
 }
 

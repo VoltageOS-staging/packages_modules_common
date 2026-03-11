@@ -49,7 +49,16 @@ class FakeSnapshotBuilder(mm.SnapshotBuilder):
         z.writestr(f"sdk_library/public/{name}.srcjar", "")
         z.writestr(f"sdk_library/public/{name}-stubs.jar", "")
         z.writestr(f"sdk_library/public/{name}.txt",
-                   "method public int testMethod(int);")
+                   """// Signature format: 2.0
+package pkg {
+
+    public class Test {
+        method public int testMethod(int);
+    }
+
+}
+
+""")
 
     def create_snapshot_file(self, out_dir, name, for_r_build):
         zip_file = Path(mm.sdk_snapshot_zip_file(out_dir, name))
@@ -109,6 +118,10 @@ class FakeSnapshotBuilder(mm.SnapshotBuilder):
             # For rest of the modules, generate an empty .info file.
             self.write_data_to_file(sdk_info_file, "[]")
 
+    # Override to prevent invoking metalava in tests.
+    def reformat_signature_file(self, signature_file):
+        return signature_file
+
     def get_module_extension_version(self):
         # Return any integer value indicating the module extension version for testing.
         return 5
@@ -163,6 +176,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -346,10 +360,33 @@ class TestProduceDist(unittest.TestCase):
             json_data["api_diff_file"],
             "art-module-sdk-current-api-diff.txt",
             msg="Incorrect api-diff file name.")
+
+        diff_file = os.path.join(
+            os.path.dirname(art_gantry_metadata_json_file),
+            "sdk",
+            json_data["api_diff_file"]
+        )
+        with open(diff_file, "r", encoding="utf8") as diff_file_object:
+            diff_file_contents = diff_file_object.read()
+
         self.assertEqual(
-            json_data["api_diff_file_size"],
-            238,
-            msg="Incorrect api-diff file size.")
+            diff_file_contents.replace(self.tmp_out_dir, "OUT_DIR").rstrip(),
+            """
+--- OUT_DIR/soong/mainline-sdks/test/prebuilts/sdk/art.api.public.latest/gen/art.api.public.latest
++++ OUT_DIR/soong/mainline-sdks/test/sdk_library/public/art.txt
+@@ -0,0 +1,9 @@
++// Signature format: 2.0
++package pkg {
++
++    public class Test {
++        method public int testMethod(int);
++    }
++
++}
++
+            """.strip(),
+            msg="Incorrect api-diff file contents.")
+
         self.assertEqual(
             json_data["module_extension_version"],
             5,
@@ -376,6 +413,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = unittest.mock.Mock(mm.SubprocessRunner)
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -431,6 +469,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
@@ -504,6 +543,7 @@ class TestProduceDist(unittest.TestCase):
         subprocess_runner = mm.SubprocessRunner()
         snapshot_builder = FakeSnapshotBuilder(
             tool_path="path/to/mainline_modules_sdks.sh",
+            metalava_path="path/to/metalava",
             subprocess_runner=subprocess_runner,
             out_dir=self.tmp_out_dir,
         )
