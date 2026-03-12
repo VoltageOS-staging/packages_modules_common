@@ -435,6 +435,11 @@ class SnapshotBuilder:
         }
         extraEnv.update(build_release.soong_env)
 
+        # Set the format specifier, if needed.
+        format_specifier = build_release.signature_format_specifier
+        if format_specifier != "":
+            extraEnv["SOONG_SDK_SNAPSHOT_SIGNATURE_FORMAT_SPECIFIER"] = format_specifier
+
         # Unless explicitly specified in the calling environment set
         # TARGET_BUILD_VARIANT=user.
         # This MUST be identical to the TARGET_BUILD_VARIANT used to build
@@ -875,6 +880,12 @@ class BuildRelease:
         PreferHandling.USE_SOURCE_CONFIG_VAR_PROPERTY
     )
 
+    # The format specifier to use when generating snapshots for this release.
+    # Must be a value suitable for passing to Metalava via the --format command
+    # line option. If this is an empty string then the snapshot will use the
+    # default value for the current build.
+    signature_format_specifier: str = "2.0:overloaded-method-order=source,add-additional-overrides=yes"
+
     # Whether the generated snapshots should include flagged APIs. Defaults to
     # false because flagged APIs are not suitable for use outside Android.
     include_flagged_apis: bool = False
@@ -1036,6 +1047,8 @@ NEXT = BuildRelease(
     # in prebuilts/module_sdk is not necessary.
     # prebuilts will be enabled using apex_contributions release build flags.
     preferHandling=PreferHandling.USE_NO_PREFER_PROPERTY,
+    # Use the default signature format for the current build.
+    signature_format_specifier="",
 )
 
 # The build release for the latest build supported by this build, i.e. the
@@ -1054,6 +1067,8 @@ LATEST = BuildRelease(
     # in prebuilts/module_sdk is not necessary.
     # prebuilts will be enabled using apex_contributions release build flags.
     preferHandling=PreferHandling.USE_NO_PREFER_PROPERTY,
+    # Use the default signature format for the current build.
+    signature_format_specifier="",
 )
 
 
