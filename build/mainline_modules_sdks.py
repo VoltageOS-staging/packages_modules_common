@@ -1019,7 +1019,13 @@ Baklava = BuildRelease(
 Baklava_1 = BuildRelease(
     name="Baklava-1",
     creator=create_sdk_snapshots_in_soong,
-    soong_env={},
+    soong_env={
+        # This release is a minor SDK bump and is simply a copy of Baklava since
+        # it isn't possible to target minor SDKs with `min_sdk_version` etc.
+        # Going forward we should try to avoid adding new build releases for
+        # minor SDK bumps.
+        "SOONG_SDK_SNAPSHOT_TARGET_BUILD_RELEASE": "Baklava",
+    },
     preferHandling=PreferHandling.USE_NO_PREFER_PROPERTY,
 )
 CinnamonBun = BuildRelease(
@@ -1039,9 +1045,11 @@ CinnamonBun = BuildRelease(
 NEXT = BuildRelease(
     name="next",
     creator=create_latest_sdk_snapshots,
-    # There are no build release specific environment variables to pass to
-    # Soong.
-    soong_env={},
+    soong_env={
+        # "next" isn't a valid target build release, so override the default
+        # logic to set it from the name.
+        "SOONG_SDK_SNAPSHOT_TARGET_BUILD_RELEASE": "current",
+    },
     generate_gantry_metadata_and_api_diff=True,
     # Starting with V, setting `prefer|use_source_config_var` on soong modules
     # in prebuilts/module_sdk is not necessary.
@@ -1056,9 +1064,11 @@ NEXT = BuildRelease(
 LATEST = BuildRelease(
     name="latest",
     creator=create_latest_sdk_snapshots,
-    # There are no build release specific environment variables to pass to
-    # Soong.
-    soong_env={},
+    soong_env={
+        # "latest" isn't a valid target build release, so override the default
+        # logic to set it from the name.
+        "SOONG_SDK_SNAPSHOT_TARGET_BUILD_RELEASE": "current",
+    },
     # Latest must include flagged APIs because it may be dropped into the main
     # Android branches.
     include_flagged_apis=True,
